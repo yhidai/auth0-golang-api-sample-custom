@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/auth0/go-jwt-middleware/v2"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
@@ -17,6 +17,7 @@ import (
 // CustomClaims contains custom data we want from the token.
 type CustomClaims struct {
 	Scope string `json:"scope"`
+	Role  string `json:"https://ocx-compute-fabric.com/role"`
 }
 
 // Validate does nothing for this example, but we need
@@ -59,7 +60,7 @@ func EnsureValidToken() func(next http.Handler) http.Handler {
 		validator.WithAllowedClockSkew(time.Minute),
 	)
 	if err != nil {
-		log.Fatalf("Failed to set up the jwt validator")
+		log.Fatalf("Failed to set up the jwt validator %v", err)
 	}
 
 	errorHandler := func(w http.ResponseWriter, r *http.Request, err error) {
@@ -73,6 +74,7 @@ func EnsureValidToken() func(next http.Handler) http.Handler {
 	middleware := jwtmiddleware.New(
 		jwtValidator.ValidateToken,
 		jwtmiddleware.WithErrorHandler(errorHandler),
+		jwtmiddleware.WithValidateOnOptions(false),
 	)
 
 	return func(next http.Handler) http.Handler {

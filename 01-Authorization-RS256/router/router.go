@@ -1,9 +1,10 @@
 package router
 
 import (
+	"log"
 	"net/http"
 
-	"github.com/auth0/go-jwt-middleware/v2"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 
 	"01-Authorization-RS256/middleware"
@@ -45,14 +46,33 @@ func New() *http.ServeMux {
 
 			w.Header().Set("Content-Type", "application/json")
 
-			token := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims)
+			// OPTIONSのリクエストの場合、無条件で成功で返す。
+			if r.Method == http.MethodOptions {
+				log.Printf("OPTIONS request to %s", r.URL.Path)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			// token, err := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims)
+			t := r.Context().Value(jwtmiddleware.ContextKey{})
+			log.Printf("Token: %+v", t)
+			token, ok := t.(*validator.ValidatedClaims)
+			if !ok {
+				log.Printf("Failed to cast token to ValidatedClaims")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message":"Failed to cast token to ValidatedClaims."}`))
+				return
+			}
 
 			claims := token.CustomClaims.(*middleware.CustomClaims)
+			log.Printf("Custom claims: %+v", claims)
 			if !claims.HasScope("read:messages") {
 				w.WriteHeader(http.StatusForbidden)
 				w.Write([]byte(`{"message":"Insufficient scope."}`))
 				return
 			}
+
+			// Extract and log user roles from the token
 
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"message":"Hello from a private endpoint! You need to be authenticated to see this."}`))
