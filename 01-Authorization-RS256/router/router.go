@@ -66,9 +66,10 @@ func New() *http.ServeMux {
 
 			claims := token.CustomClaims.(*middleware.CustomClaims)
 			log.Printf("Custom claims: %+v", claims)
-			if !claims.HasScope("read:messages") {
+			if !claims.HasPermission("read:messages") {
+				log.Printf("Insufficient permission: read:messages")
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(`{"message":"Insufficient scope."}`))
+				w.Write([]byte(`{"message":"Insufficient permission."}`))
 				return
 			}
 
